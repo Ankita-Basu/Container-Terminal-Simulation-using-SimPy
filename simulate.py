@@ -66,7 +66,7 @@ def vessel_arrival(env, vessel, terminal, num_berths, num_cranes,num_trucks):
 def run_terminal(env, num_berths, num_cranes , num_trucks):
     terminal = Terminal(env, num_berths, num_cranes, num_trucks)
 
-    for vessel in range(2):
+    for vessel in range(1,3):
         env.process(vessel_arrival(env, vessel, terminal, num_berths, num_cranes, num_trucks ))
 
     while True:
