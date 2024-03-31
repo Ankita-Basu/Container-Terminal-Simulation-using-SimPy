@@ -34,6 +34,7 @@ class Terminal(object):
 def vessel_arrival(env, vessel, terminal):
     #arrive at terminal
     arrival_time = env.now
+    print(f"Vessel {vessel} arrived at terminal at {env.now} minutes")
 
     #get berth
     with terminal.berth.request() as request:
@@ -64,7 +65,7 @@ def run_terminal(env, num_berths, num_cranes , num_trucks):
         env.process(vessel_arrival(env, vessel, terminal))
 
     while True:
-        yield env.timeout(vesselArivalTime)
+        yield env.timeout(random.expovariate(1/vesselArivalTime))
         vessel += 1
         env.process(vessel_arrival(env, vessel, terminal))
 
