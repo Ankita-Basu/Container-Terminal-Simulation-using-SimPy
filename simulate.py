@@ -3,16 +3,20 @@ import statistics
 import random
 
 wait_time= []
+#per container
 truckMoveTime=6
 craneMoveTime=3
 
 vesselArivalTime=5 * 60 
+numContainerPerVessel=150
+
 
 class Terminal(object):
     def __init__(self,env, num_berths, num_cranes, num_trucks) -> None:
         self.env =env
-        self.berth=simpy.Resource(env, num_berths)
-        self.crane=simpy.Resource(env, num_cranes)
+        # self.berth=simpy.Resource(env, num_berths)
+        self.berth=[simpy.Resource(env) for _ in range(num_berths)]
+        self.crane=[simpy.Resource(env)  for _ in range(num_cranes)]
         self.truck=simpy.Resource(env, num_trucks)
         
 
@@ -31,22 +35,23 @@ class Terminal(object):
     
 
 
-def vessel_arrival(env, vessel, terminal):
+def vessel_arrival(env, vessel, terminal, num_berths, num_cranes,num_trucks):
     #arrive at terminal
     arrival_time = env.now
     print(f"Vessel {vessel} arrived at terminal at {env.now} minutes")
 
     #get berth
-    with terminal.berth.request() as request:
+    with terminal.berth[vessel % num_berths].request() as request:
         yield request
-        print(f"Vessel {vessel} docked at berth at {env.now} minutes")
+        print(f"Vessel {vessel} docked at berth {vessel % num_berths} at {env.now} minutes")
         yield env.process(terminal.dock_vessel(vessel))
 
-    #vessel gets download by crane
-    with terminal.crane.request() as request:
-        yield request
-        print(f"Vessel {vessel} unloaded by crane at {env.now} minutes")
-        yield env.process(terminal.move_by_crane(vessel))
+    #vessel-containers gets download by crane
+    for _ in range(numContainerPerVessel):
+        with terminal.crane[vessel % num_cranes].request() as request:
+            yield request
+            print(f"Vessel {vessel} unloaded by crane {vessel % num_cranes} at {env.now} minutes")
+            yield env.process(terminal.move_by_crane(vessel))
 
     #get truck
     with terminal.truck.request() as request:
@@ -62,12 +67,13 @@ def run_terminal(env, num_berths, num_cranes , num_trucks):
     terminal = Terminal(env, num_berths, num_cranes, num_trucks)
 
     for vessel in range(2):
-        env.process(vessel_arrival(env, vessel, terminal))
+        env.process(vessel_arrival(env, vessel, terminal, num_berths, num_cranes, num_trucks ))
 
     while True:
+        #exponential distribution of average 5hrs
         yield env.timeout(random.expovariate(1/vesselArivalTime))
         vessel += 1
-        env.process(vessel_arrival(env, vessel, terminal))
+        env.process(vessel_arrival(env, vessel, terminal, num_berths, num_cranes, num_trucks))
 
 
 def calculate_wait_time(wait_time):
